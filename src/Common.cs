@@ -24,34 +24,35 @@ namespace ILikeVocabulary
 
             return _httpClient;
         }
-        public static string GetWords(int index)
+        public static string GetWords(int index, HttpClient parmClient)
         {
             string result = string.Empty;
-            using (HttpClient client = new HttpClient())
+
+            // using (HttpClient client = new HttpClient())
+            // {
+            HttpResponseMessage response = parmClient.GetAsync("https://www.youdict.com").Result;
+            response.EnsureSuccessStatusCode();
+            string resultStr = response.Content.ReadAsStringAsync().Result;
+
+            var parser = new HtmlParser();
+            var document = parser.ParseDocument(resultStr);
+
+            var word = document.QuerySelectorAll("h3#yd-word").FirstOrDefault();
+            var pron = document.QuerySelectorAll("div#yd-word-pron").FirstOrDefault();
+            var wordMean = document.QuerySelectorAll("div#yd-word-meaning ul li");
+            string strMean = string.Empty;
+            foreach (var str in wordMean)
             {
-                HttpResponseMessage response = client.GetAsync("https://www.youdict.com/").Result;
-                response.EnsureSuccessStatusCode();
-                string resultStr = response.Content.ReadAsStringAsync().Result;
-
-                var parser = new HtmlParser();
-                var document = parser.ParseDocument(resultStr);
-
-                var word = document.QuerySelectorAll("h3#yd-word").FirstOrDefault();
-                var pron = document.QuerySelectorAll("div#yd-word-pron").FirstOrDefault();
-                var wordMean = document.QuerySelectorAll("div#yd-word-meaning ul li");
-                string strMean = string.Empty;
-                foreach (var str in wordMean)
-                {
-                    strMean += $"{str.TextContent} ";
-                }
-                var wordSentens = document.QuerySelectorAll("div#yd-liju dl dt").FirstOrDefault();
-
-                result = $"{index}.  {GetResult(word)}";
-                result += $"    {GetResult(pron)}";
-                result += $"    {strMean}\r\n";
-                result += $"    {GetResult(wordSentens)}";
-                result += $"\r\n";
+                strMean += $"{str.TextContent} ";
             }
+            var wordSentens = document.QuerySelectorAll("div#yd-liju dl dt").FirstOrDefault();
+
+            result = $"{index}.  {GetResult(word)}";
+            result += $"    {GetResult(pron)}";
+            result += $"    {strMean}\r\n";
+            result += $"    {GetResult(wordSentens)}";
+            result += $"\r\n";
+            // }
             return result;
         }
 

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using AngleSharp.Dom;
 using System.Threading;
 using System.Diagnostics;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace ILikeVocabulary
 {
@@ -16,7 +17,22 @@ namespace ILikeVocabulary
     {
         static void Main(string[] args)
         {
+
             Console.OutputEncoding = Encoding.UTF8;
+
+            IServiceCollection services = new ServiceCollection();
+
+
+            Configure(services);
+
+            var service = services.BuildServiceProvider();
+
+            // Console.WriteLine("Creating a client...");
+            //var YoudictClient = service.GetRequiredService<YoudictClient>();
+            //构建容器
+            IServiceProvider serviceProvider = services.BuildServiceProvider();
+
+            var memcachedClient = serviceProvider.GetService<IHttpClientFactory>();
 
             Console.WriteLine("请输入要获取的单词数量:");
 
@@ -30,25 +46,46 @@ namespace ILikeVocabulary
             Stopwatch watchAll = new Stopwatch();
             watchAll.Start();
             Console.WriteLine($"开始获取单词, 总计 {wordNumber} 个...");
-            Parallel.For(0, wordNumber, (index) =>
+            for (int index = 0; index < arr.Length; index++)
             {
                 Stopwatch watch = new Stopwatch();
                 watch.Start();
+
                 int wordIndex = index + 1;
                 try
                 {
-                    arr[index] = Common.GetWords(wordIndex);
+                    arr[index] = Common.GetWords(wordIndex, memcachedClient.CreateClient());
                     Console.WriteLine($"第 {wordIndex} 个单词获取完成, 花费时间 {watch.ElapsedMilliseconds} ms...");
 
                 }
-                catch
+                catch(Exception e)
                 {
                     // arr[index] = string.Empty;
-                    Console.WriteLine($"第 {wordIndex} 个单词获取异常, 花费时间 {watch.ElapsedMilliseconds} ms...");
+                    Console.WriteLine($"第 {wordIndex} 个单词获取异常, 异常内容 {e}, 花费时间 {watch.ElapsedMilliseconds} ms...");
                 }
                 watch.Stop();
                 Thread.Sleep(100);
-            });
+            }
+            // Parallel.For(0, wordNumber, (index) =>
+            // {
+            //     Stopwatch watch = new Stopwatch();
+            //     watch.Start();
+
+            //     int wordIndex = index + 1;
+            //     try
+            //     {
+            //         arr[index] = Common.GetWords(wordIndex, memcachedClient.CreateClient());
+            //         Console.WriteLine($"第 {wordIndex} 个单词获取完成, 花费时间 {watch.ElapsedMilliseconds} ms...");
+
+            //     }
+            //     catch
+            //     {
+            //         // arr[index] = string.Empty;
+            //         Console.WriteLine($"第 {wordIndex} 个单词获取异常, 花费时间 {watch.ElapsedMilliseconds} ms...");
+            //     }
+            //     watch.Stop();
+            //     Thread.Sleep(10);
+            // });
             foreach (string res in arr)
             {
                 if (!string.IsNullOrEmpty(res))
@@ -63,5 +100,12 @@ namespace ILikeVocabulary
 
             Console.ReadLine();
         }
+
+        public static void Configure(IServiceCollection services)
+        {
+            // services.AddHttpClient<YoudictClient>();
+            services.AddHttpClient();
+        }
+
     }
 }
